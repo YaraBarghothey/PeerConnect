@@ -69,7 +69,15 @@ import javax.swing.event.DocumentListener;
  * everything goes through MessengerClient, which returns immediately.
  */
 public final class ClientFrame extends JFrame implements MessengerListener {
-    private static final Color OUT_BG = new Color(0xD4E8FB), IN_BG = new Color(0xEEF2F6), NAVY = new Color(0x12304F);
+    private static final Color JADE = new Color(0x042D22);
+    private static final Color LIME = new Color(0xD9E991);
+    private static final Color FIELD = new Color(0xEFF5DD);
+    private static final Color IVORY = new Color(0xF7F9EF);
+    private static final Color BUTTON = new Color(0x3F6858);
+    private static final Color BORDER = new Color(0x6F8D7E);
+    private static final Color UI_ERROR = new Color(0xFFABA8);
+    private static final Color UI_SUCCESS = new Color(0xAADCAC);
+
     private static final int MAX = Protocol.MAX_TEXT_CHARS;
 
     private final MessengerClient client;
@@ -130,6 +138,7 @@ public final class ClientFrame extends JFrame implements MessengerListener {
         g.gridx = 1; g.weightx = 0.5; cols.add(centerPanel(), g);
         g.gridx = 2; g.weightx = 0.25; g.insets = new Insets(0, 0, 0, 0); cols.add(rightPanel(), g);
         root.add(cols, BorderLayout.CENTER);
+        applyTheme(root);
         setContentPane(root);
         setSize(1180, 720);
         setMinimumSize(new Dimension(1000, 600));
@@ -154,15 +163,90 @@ public final class ClientFrame extends JFrame implements MessengerListener {
         bubbles.setName("bubbles");
     }
 
+    private void applyTheme(Component component) {
+        if (component instanceof JPanel panel && panel != bubbles
+                && panel != bubbleScroll.getViewport().getView()) {
+            panel.setBackground(JADE);
+            if (panel.getBorder() instanceof javax.swing.border.TitledBorder title) {
+                title.setTitleColor(IVORY);
+                title.setBorder(BorderFactory.createLineBorder(BORDER));
+            }
+        } else if (component instanceof JScrollPane scroll) {
+            Color surface = scroll.getViewport().getView() == compose ? FIELD : IVORY;
+            scroll.setBackground(surface);
+            scroll.getViewport().setBackground(surface);
+            applyTheme(scroll.getViewport().getView());
+            return;
+        } else if (component instanceof JTextField || component == compose
+                || component == logArea || component == contactList || component == presenceBox) {
+            component.setBackground(component == logArea || component == contactList ? IVORY : FIELD);
+            component.setForeground(JADE);
+            if (component instanceof javax.swing.text.JTextComponent text) {
+                text.setCaretColor(JADE);
+                text.setDisabledTextColor(BUTTON);
+            }
+            return;
+        } else if (component instanceof JLabel label) {
+            if (!LIME.equals(label.getForeground())) {
+                label.setForeground(IVORY);
+            }
+        } else if (component instanceof JCheckBox check) {
+            check.setBackground(JADE);
+            check.setForeground(IVORY);
+        } else if (component instanceof javax.swing.AbstractButton button) {
+            styleButton(button);
+            return;
+        }
+        if (component instanceof java.awt.Container container) {
+            for (Component child : container.getComponents()) {
+                applyTheme(child);
+            }
+        }
+    }
+
+    private void styleButton(javax.swing.AbstractButton button) {
+        boolean transport = button == udpBtn || button == tcpBtn;
+        Font font = button.getFont();
+        Insets insets = button.getInsets();
+        button.setUI(new javax.swing.plaf.basic.BasicButtonUI() {
+            @Override public void update(Graphics g, JComponent c) {
+                boolean enabled = button.isEnabled();
+                boolean accented = enabled && (button == loginBtn || transport && button.isSelected());
+                g.setColor(accented ? LIME : enabled ? BUTTON : JADE);
+                g.fillRect(0, 0, c.getWidth(), c.getHeight());
+                paint(g, c);
+                if (button.isFocusPainted() && button.hasFocus()) {
+                    g.setColor(accented ? JADE : LIME);
+                    g.drawRect(2, 2, c.getWidth() - 5, c.getHeight() - 5);
+                }
+            }
+
+            @Override protected void paintText(Graphics g, javax.swing.AbstractButton b,
+                                               java.awt.Rectangle bounds, String text) {
+                boolean accented = b == loginBtn || transport && b.isSelected();
+                g.setColor(!b.isEnabled() ? BORDER : accented ? JADE : IVORY);
+                javax.swing.plaf.basic.BasicGraphicsUtils.drawStringUnderlineCharAt(
+                        g, text, b.getDisplayedMnemonicIndex(),
+                        bounds.x, bounds.y + g.getFontMetrics().getAscent());
+            }
+        });
+        button.setFont(font);
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER),
+                BorderFactory.createEmptyBorder(insets.top - 1, insets.left - 1,
+                        insets.bottom - 1, insets.right - 1)));
+        button.setOpaque(true);
+    }
+
     private JComponent header() {
         JPanel p = new JPanel(new BorderLayout());
-        p.setBackground(NAVY);
+        p.setBackground(JADE);
         p.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
         JLabel t = new JLabel("PeerConnect  /  Desktop Messenger");
-        t.setForeground(Color.WHITE);
+        t.setForeground(LIME);
         t.setFont(t.getFont().deriveFont(Font.BOLD, 18f));
         p.add(t, BorderLayout.WEST);
-        banner.setForeground(new Color(0xFFE08A));
+        banner.setForeground(IVORY);
         p.add(banner, BorderLayout.EAST);
         return p;
     }
@@ -205,8 +289,8 @@ public final class ClientFrame extends JFrame implements MessengerListener {
         bubbles.setLayout(new BoxLayout(bubbles, BoxLayout.Y_AXIS));
         bubbles.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
         JPanel wrapper = new JPanel(new BorderLayout());
-        wrapper.setBackground(Color.WHITE);
-        bubbles.setBackground(Color.WHITE);
+        wrapper.setBackground(IVORY);
+        bubbles.setBackground(IVORY);
         wrapper.add(bubbles, BorderLayout.NORTH);
         return wrapper;
     }
@@ -309,13 +393,13 @@ public final class ClientFrame extends JFrame implements MessengerListener {
         if (connected || connecting) return;
         try {
             connecting = true;
-            loginStatus.setForeground(Color.DARK_GRAY);
+            loginStatus.setForeground(IVORY);
             loginStatus.setText("Connecting...");
             updateControls();
             client.login(hostField.getText(), portField.getText(), userField.getText().trim(), new String(passField.getPassword()), udpField.getText());
         } catch (IllegalArgumentException ex) {          // invalid IP/port/username: friendly message, nothing sent
             connecting = false;
-            loginStatus.setForeground(new Color(0xB00020));
+            loginStatus.setForeground(UI_ERROR);
             loginStatus.setText(ex.getMessage());
             log("Input error: " + ex.getMessage());
             updateControls();
@@ -412,7 +496,7 @@ public final class ClientFrame extends JFrame implements MessengerListener {
         String text = compose.getText();
         int n = Protocol.charCount(text);
         counter.setText(n + "/" + MAX);
-        counter.setForeground(n > MAX ? new Color(0xB00020) : Color.DARK_GRAY);
+        counter.setForeground(n > MAX ? UI_ERROR : IVORY);
         boolean valid = !text.isBlank() && n <= MAX;
         sendBtn.setEnabled(connected && selectedPeer != null && valid);   // disabled: no recipient / not connected / empty / too long
         sendBtn.setToolTipText(!connected ? "Not connected" : selectedPeer == null ? "Select a recipient first" : !valid ? "Type a message (max " + MAX + " characters)" : null);
@@ -470,8 +554,8 @@ public final class ClientFrame extends JFrame implements MessengerListener {
         row.setBorder(BorderFactory.createEmptyBorder(3, 4, 3, 4));
         JPanel bubble = new JPanel();
         bubble.setLayout(new BoxLayout(bubble, BoxLayout.Y_AXIS));
-        bubble.setBackground(m.outgoing ? OUT_BG : IN_BG);
-        bubble.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(m.outgoing ? new Color(0xA9CBEF) : new Color(0xD3DAE2)), BorderFactory.createEmptyBorder(5, 8, 5, 8)));
+        bubble.setBackground(m.outgoing ? FIELD : IVORY);
+        bubble.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(BORDER), BorderFactory.createEmptyBorder(5, 8, 5, 8)));
 
         JPanel head = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         head.setOpaque(false);
@@ -489,7 +573,8 @@ public final class ClientFrame extends JFrame implements MessengerListener {
 
         JTextArea t = new JTextArea(m.text);
         t.setEditable(false); t.setLineWrap(true); t.setWrapStyleWord(true); t.setBorder(null);
-        t.setBackground(m.outgoing ? OUT_BG : IN_BG);   // same colour as the bubble (Nimbus ignores setOpaque(false) on text areas)
+        t.setBackground(m.outgoing ? FIELD : IVORY);   // same colour as the bubble (Nimbus ignores setOpaque(false) on text areas)
+        t.setForeground(JADE);
         t.setComponentOrientation(isRtl(m.text) ? ComponentOrientation.RIGHT_TO_LEFT : ComponentOrientation.LEFT_TO_RIGHT);
         FontMetrics fm = t.getFontMetrics(t.getFont());
         int w = 150;
@@ -542,13 +627,13 @@ public final class ClientFrame extends JFrame implements MessengerListener {
     @Override public void onTcpState(TcpState state, String detail) {
         ui(() -> {
             tcpState.setText(state + (detail == null || detail.isEmpty() ? "" : "  (" + detail + ")"));
-            tcpState.setForeground(state == TcpState.CONNECTED ? new Color(0x1B7F4B) : state == TcpState.CONNECTING ? Color.DARK_GRAY : new Color(0xB00020));
+            tcpState.setForeground(state == TcpState.CONNECTED ? UI_SUCCESS : state == TcpState.CONNECTING ? IVORY : UI_ERROR);
             connected = state == TcpState.CONNECTED;
             if (state == TcpState.CONNECTING) connecting = true;
             if (state == TcpState.DISCONNECTED) {
                 connecting = false;
                 online.clear();
-                if (detail != null && !"Logged out".equals(detail)) { banner.setText("Disconnected: " + detail); loginStatus.setForeground(new Color(0xB00020)); loginStatus.setText(detail); }
+                if (detail != null && !"Logged out".equals(detail)) { banner.setText("Disconnected: " + detail); loginStatus.setForeground(UI_ERROR); loginStatus.setText(detail); }
                 else loginStatus.setText("Logged out");
                 refreshContacts(); updateHeader();
             }
@@ -599,7 +684,7 @@ public final class ClientFrame extends JFrame implements MessengerListener {
     @Override public void onLoginResult(boolean ok, String message, int udpPort) {
         ui(() -> {
             connecting = false;
-            loginStatus.setForeground(ok ? new Color(0x1B7F4B) : new Color(0xB00020));
+            loginStatus.setForeground(ok ? UI_SUCCESS : UI_ERROR);
             loginStatus.setText(message);
             if (ok) { passField.setText(""); banner.setText(" "); }
             updateControls();
@@ -612,17 +697,18 @@ public final class ClientFrame extends JFrame implements MessengerListener {
         @Override public Component getListCellRendererComponent(JList<? extends Contact> list, Contact c, int index, boolean selected, boolean focus) {
             JPanel p = new JPanel(new BorderLayout(8, 0));
             p.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
-            p.setBackground(selected ? new Color(0xD9E8F7) : Color.WHITE);
+            p.setBackground(selected ? FIELD : IVORY);
             final Color dot = c.info() == null ? Color.LIGHT_GRAY : switch (c.info().presence()) { case ONLINE -> new Color(0x2EAD6B); case BUSY -> new Color(0xD64545); case AWAY -> new Color(0xF0B040); };
             JComponent d = new JComponent() {
                 @Override protected void paintComponent(Graphics g) { g.setColor(dot); g.fillOval(0, 4, 12, 12); }
             };
             d.setPreferredSize(new Dimension(14, 20));
             JLabel name = new JLabel(c.name());
+            name.setForeground(JADE);
             name.setFont(name.getFont().deriveFont(Font.BOLD));
             JLabel sub = new JLabel(c.info() == null ? "Offline" : c.info().presence().label() + "  |  UDP ready");
             sub.setFont(sub.getFont().deriveFont(Font.PLAIN, 11f));
-            sub.setForeground(Color.GRAY);
+            sub.setForeground(BUTTON);
             JPanel mid = new JPanel(new java.awt.GridLayout(2, 1));
             mid.setOpaque(false);
             mid.add(name); mid.add(sub);
