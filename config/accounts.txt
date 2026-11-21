@@ -1,7 +1,6 @@
 # PeerConnect demo accounts (classroom use only). Format: username:pbkdf2$sha256$iterations$salt$hash
-sara:pbkdf2$sha256$120000$B900WLgw1EPLyWYPPF6DeQ==$IgTyEfEzRd9pt28ca+JAHUxuXSm+ULpgFw7GNRm/cLI=
-adam:pbkdf2$sha256$120000$x5fgs/pPz0grV/Jb6ihXgQ==$0BiLR4Vk+Fb69Arm1X492A76vb52uphxo0niEZnJJNA=
-ali:pbkdf2$sha256$120000$sZT/RxpN7LPhcujwBSDTqw==$ez+WoME+nJCuKyr6FElIDXmlZLQTYfJN9mFfpBgSZwo=
-aws:pbkdf2$sha256$120000$XEeTZqpLxYPRsVTpvwioyQ==$fLVpMITHh19cAbRldeGkIjC2G2daUG5ihBONYwr0TIQ=
-saly:pbkdf2$sha256$120000$X1pqPs1C8hdOzDDiNlzhtw==$VbTt+OXNLJK8csudeYFGrg8Ruo8f1vNv9eVYEp8t10Y=
-omar:pbkdf2$sha256$120000$Zwd5G6A3eD8SgBuaMqnFvA==$QSgAG9lAOTrOag1F+5ecE5XtHlTeGfr2nJeWU7mddqM=
+sara:pbkdf2$sha256$120000$EF/sJjAxJiGFcRFaHlT+eg==$zPVBnYCi6th76N5gaYksJcY1QM0oKsiZKBKJGpHgV0s=
+yara:pbkdf2$sha256$120000$NY7cUuXXVvC6yCGZnnFJfw==$bjjA66xQkbzq2wKT+BKUrijjy82SMRpFPAK8HxbzbjU=
+saloha:pbkdf2$sha256$120000$xD4sZ18jaYeF9i1f1wwVZw==$nD7C0hJ256XHSTt6DCO6hzKhxdkumtWBVaEt/HxUV6E=
+shatha:pbkdf2$sha256$120000$4Ua8719KiLW3/NJjNaEI7A==$asaaGYgGph2tfqmUfDdTHGEg9yiPyrvJ2XbSqzkEL10=
+haifa:pbkdf2$sha256$120000$0I+Srhi5d68wT7xHcXc4xA==$PP0K89G6Ng8CgWsEHhGe6tLmX1XheWYJnPT8IrL40tU=

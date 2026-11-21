@@ -8,6 +8,9 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Insets;
+import java.awt.Rectangle;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.text.SimpleDateFormat;
@@ -17,6 +20,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -27,13 +31,27 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import javax.swing.border.TitledBorder;
+import javax.swing.plaf.basic.BasicButtonUI;
+import javax.swing.plaf.basic.BasicGraphicsUtils;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
 
 /**
  * Server administration window. All Swing access happens on the EDT; start()/stop() (socket bind, thread joins)
  * run on a single background executor, and the "Listening" label is changed only AFTER the bind really succeeded.
  */
 public final class ServerFrame extends JFrame implements ServerListener {
+    private static final Color JADE = new Color(0x042D22);
+    private static final Color LIME = new Color(0xD9E991);
+    private static final Color FIELD = new Color(0xEFF5DD);
+    private static final Color IVORY = new Color(0xF7F9EF);
+    private static final Color SECONDARY = new Color(0x3F6858);
+    private static final Color BORDER = new Color(0x6F8D7E);
+    private static final Color ERROR = new Color(0xFF9C9C);
+    private static final Color SUCCESS = new Color(0xAADCAC);
+
     private final ServerConfig cfg;
     private final AccountStore accounts;
     private PeerConnectServer server;                       // touched only from the control executor
@@ -70,43 +88,93 @@ public final class ServerFrame extends JFrame implements ServerListener {
         statusLabel.setName("statusLabel"); connectedLabel.setName("connectedLabel"); announceField.setName("announceField");
         broadcastBtn.setName("broadcastBtn"); logArea.setName("logArea");
         statusLabel.setFont(statusLabel.getFont().deriveFont(Font.BOLD, 14f));
-        errorLabel.setForeground(new Color(0xB00020));
-        startBtn.setBackground(new Color(0x2E9E6B)); startBtn.setForeground(Color.WHITE); startBtn.setOpaque(true);
-        stopBtn.setBackground(new Color(0xC95555)); stopBtn.setForeground(Color.WHITE); stopBtn.setOpaque(true);
+        errorLabel.setForeground(ERROR);
+        connectedLabel.setForeground(IVORY);
+        for (JTextField field : new JTextField[] { bindField, portField, announceField }) {
+            field.setBackground(FIELD);
+            field.setForeground(JADE);
+            field.setCaretColor(JADE);
+            field.setDisabledTextColor(SECONDARY);
+            recolorBorder(field, BORDER);
+        }
+        styleButton(startBtn, LIME, JADE);
+        styleButton(stopBtn, SECONDARY, IVORY);
+        styleButton(broadcastBtn, SECONDARY, IVORY);
 
         JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
-        top.setBackground(new Color(0xE6F0F8));
-        top.add(new JLabel("Bind IP:")); top.add(bindField);
-        top.add(new JLabel("TCP port:")); top.add(portField);
+        top.setBackground(JADE);
+        JLabel bindLabel = new JLabel("Bind IP:");
+        bindLabel.setForeground(IVORY);
+        JLabel portLabel = new JLabel("TCP port:");
+        portLabel.setForeground(IVORY);
+        top.add(bindLabel); top.add(bindField);
+        top.add(portLabel); top.add(portField);
         top.add(startBtn); top.add(stopBtn);
         top.add(statusLabel); top.add(connectedLabel);
 
         JTable table = new JTable(tableModel);
         table.setName("sessionsTable");
         table.setRowHeight(22);
-        JPanel sessions = titled("ACTIVE CLIENT SESSIONS", new JScrollPane(table));
+        table.setBackground(IVORY);
+        table.setForeground(JADE);
+        table.setGridColor(BORDER);
+        table.setSelectionBackground(LIME);
+        table.setSelectionForeground(JADE);
+
+        JTableHeader header = table.getTableHeader();
+        header.setBackground(SECONDARY);
+        header.setForeground(IVORY);
+        TableCellRenderer headerRenderer = header.getDefaultRenderer();
+        header.setDefaultRenderer((t, value, selected, focus, row, column) -> {
+            java.awt.Component cell = headerRenderer.getTableCellRendererComponent(
+                    t, value, selected, focus, row, column);
+            cell.setBackground(SECONDARY);
+            cell.setForeground(IVORY);
+            if (cell instanceof JComponent component) {
+                component.setOpaque(true);
+                recolorBorder(component, focus ? LIME : BORDER);
+            }
+            return cell;
+        });
+
+        JScrollPane sessionScroll = new JScrollPane(table);
+        sessionScroll.setBackground(IVORY);
+        sessionScroll.getViewport().setBackground(IVORY);
+        sessionScroll.setColumnHeaderView(header);
+        sessionScroll.getColumnHeader().setBackground(SECONDARY);        recolorBorder(sessionScroll, BORDER);
+        JPanel sessions = titled("ACTIVE CLIENT SESSIONS", sessionScroll);
 
         JPanel ann = new JPanel(new BorderLayout(6, 6));
+        ann.setBackground(JADE);
         ann.add(announceField, BorderLayout.CENTER);
         ann.add(broadcastBtn, BorderLayout.SOUTH);
         JPanel announce = titled("SERVER ANNOUNCEMENT", ann);
         announce.setPreferredSize(new Dimension(280, 100));
 
         JPanel mid = new JPanel(new BorderLayout(8, 8));
+        mid.setBackground(JADE);
         mid.add(sessions, BorderLayout.CENTER);
         mid.add(announce, BorderLayout.EAST);
 
         logArea.setEditable(false);
         logArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        logArea.setBackground(IVORY);
+        logArea.setForeground(JADE);
+        logArea.setCaretColor(JADE);
         JScrollPane logScroll = new JScrollPane(logArea);
+        logScroll.setBackground(IVORY);
+        logScroll.getViewport().setBackground(IVORY);
+        recolorBorder(logScroll, BORDER);
         logScroll.setPreferredSize(new Dimension(800, 190));
         JPanel logPanel = titled("REAL-TIME EVENT LOG", logScroll);
 
         JPanel south = new JPanel(new BorderLayout());
+        south.setBackground(JADE);
         south.add(errorLabel, BorderLayout.NORTH);
         south.add(logPanel, BorderLayout.CENTER);
 
         JPanel root = new JPanel(new BorderLayout(8, 8));
+        root.setBackground(JADE);
         root.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         root.add(top, BorderLayout.NORTH);
         root.add(mid, BorderLayout.CENTER);
@@ -122,9 +190,50 @@ public final class ServerFrame extends JFrame implements ServerListener {
 
     private static JPanel titled(String title, java.awt.Component c) {
         JPanel p = new JPanel(new BorderLayout());
-        p.setBorder(BorderFactory.createTitledBorder(title));
+        p.setBackground(JADE);
+        TitledBorder border = BorderFactory.createTitledBorder(title);
+        Insets insets = border.getBorder().getBorderInsets(p);
+        border.setBorder(BorderFactory.createMatteBorder(
+                insets.top, insets.left, insets.bottom, insets.right, BORDER));
+        border.setTitleColor(IVORY);
+        p.setBorder(border);
         p.add(c, BorderLayout.CENTER);
         return p;
+    }
+
+    private static void recolorBorder(JComponent component, Color color) {
+        Insets insets = component.getInsets();
+        component.setBorder(BorderFactory.createMatteBorder(
+                insets.top, insets.left, insets.bottom, insets.right, color));
+    }
+
+    private static void styleButton(JButton button, Color background, Color foreground) {
+        Font font = button.getFont();
+        Insets insets = button.getInsets();
+        button.setUI(new BasicButtonUI() {
+            @Override public void update(Graphics g, JComponent c) {
+                g.setColor(button.isEnabled() ? background : SECONDARY);
+                g.fillRect(0, 0, c.getWidth(), c.getHeight());
+                paint(g, c);
+                if (button.isFocusPainted() && button.hasFocus()) {
+                    g.setColor(foreground);
+                    g.drawRect(2, 2, c.getWidth() - 5, c.getHeight() - 5);
+                }
+            }
+
+            @Override protected void paintText(Graphics g, javax.swing.AbstractButton b,
+                                               Rectangle bounds, String text) {
+                g.setColor(b.isEnabled() ? foreground : new Color(0xAFC2B8));
+                BasicGraphicsUtils.drawStringUnderlineCharAt(g, text, b.getDisplayedMnemonicIndex(),
+                        bounds.x, bounds.y + g.getFontMetrics().getAscent());
+            }
+        });
+        button.setFont(font);
+        button.setOpaque(true);
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER),
+                BorderFactory.createEmptyBorder(
+                        insets.top - 1, insets.left - 1, insets.bottom - 1, insets.right - 1)));
     }
 
     // ------------------------------------------------------------------ actions (EDT) -> work on background executor
@@ -142,7 +251,7 @@ public final class ServerFrame extends JFrame implements ServerListener {
         }
         startBtn.setEnabled(false);
         statusLabel.setText("STARTING...");
-        statusLabel.setForeground(Color.DARK_GRAY);
+        statusLabel.setForeground(IVORY);
         control.execute(() -> {
             try {
                 ServerConfig c = new ServerConfig();
@@ -199,7 +308,7 @@ public final class ServerFrame extends JFrame implements ServerListener {
         running = true;
         PeerConnectServer s = server;
         statusLabel.setText("LISTENING on " + bindField.getText().trim() + ":" + portField.getText().trim());
-        statusLabel.setForeground(new Color(0x1B7F4B));
+        statusLabel.setForeground(SUCCESS);
         startBtn.setEnabled(false); stopBtn.setEnabled(true);
         bindField.setEnabled(false); portField.setEnabled(false); broadcastBtn.setEnabled(true);
         refreshTable();
@@ -208,7 +317,7 @@ public final class ServerFrame extends JFrame implements ServerListener {
     private void setStopped() {
         running = false;
         statusLabel.setText("STOPPED");
-        statusLabel.setForeground(new Color(0xB00020));
+        statusLabel.setForeground(ERROR);
         startBtn.setEnabled(true); stopBtn.setEnabled(false);
         bindField.setEnabled(true); portField.setEnabled(true); broadcastBtn.setEnabled(false);
         refreshTable();
