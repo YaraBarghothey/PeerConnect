@@ -1,0 +1,28 @@
+PeerConnect - YOUR_NAME_1 / YOUR_ID_1 , YOUR_NAME_2 / YOUR_ID_2
+PeerConnect integration test run - Wed Nov 18 09:18:09 UTC 2026 - Java 21.0.13.0.3 - Linux
+
+T01   Valid login (directory, UDP port registered)                   PASSED     959 ms  
+T02   Wrong credentials / unknown user / bad input                   PASSED     152 ms  
+T03   Duplicate login rejected, first session intact                 PASSED     136 ms  
+T04   Concurrent duplicate login (8 threads, exactly 1 wins)         PASSED     795 ms  
+T05   Three clients + automatic directory updates                    PASSED     153 ms  
+T06   Six simultaneous clients                                       PASSED     384 ms  
+T07   UDP direct chat + ACK, server does not relay                   PASSED     187 ms  
+T08   TCP via server: relayed to addressed user only                 PASSED    1348 ms  
+T09   Presence change pushed to other clients                        PASSED     178 ms  
+T10   Offline recipient: clear error, no blocking (TCP+UDP)          PASSED      69 ms  
+T11   Lost UDP: 3 transmissions then Failed                          PASSED    3132 ms  
+T12   Lost ACK: retransmission, displayed once                       PASSED    5114 ms  
+T13   Duplicate datagrams: displayed once, ACK each time             PASSED     464 ms  
+T14   Unexpected client termination + stale session timeout          PASSED    2517 ms  
+T15   Server Stop/Start: cleanup, no stuck port/threads              PASSED     204 ms  
+T16   Arabic / Unicode / multiline / quotes (both transports)        PASSED     306 ms  
+T17   Empty and oversized messages (send + receive side)             PASSED    1770 ms  
+T18   Malformed TCP frames and UDP datagrams                         PASSED     712 ms  
+T20   Separate histories, unread counters, 200-message cap           PASSED      12 ms  
+T21   Logout/Login: no stale tasks, endpoints or retries             PASSED    4020 ms  
+T23   Password hashing: no plaintext anywhere                        PASSED     359 ms  
+T24   Dedup cache bounds + TTL; session message IDs unique           PASSED     101 ms  
+T25   Server announcement broadcast + slow/closed client isolation   PASSED     252 ms  
+
+SUMMARY: 23 passed, 0 failed, 23 executed.

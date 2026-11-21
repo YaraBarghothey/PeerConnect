@@ -1,0 +1,7 @@
+# PeerConnect demo accounts (classroom use only). Format: username:pbkdf2$sha256$iterations$salt$hash
+sara:pbkdf2$sha256$120000$B900WLgw1EPLyWYPPF6DeQ==$IgTyEfEzRd9pt28ca+JAHUxuXSm+ULpgFw7GNRm/cLI=
+adam:pbkdf2$sha256$120000$x5fgs/pPz0grV/Jb6ihXgQ==$0BiLR4Vk+Fb69Arm1X492A76vb52uphxo0niEZnJJNA=
+ali:pbkdf2$sha256$120000$sZT/RxpN7LPhcujwBSDTqw==$ez+WoME+nJCuKyr6FElIDXmlZLQTYfJN9mFfpBgSZwo=
+aws:pbkdf2$sha256$120000$XEeTZqpLxYPRsVTpvwioyQ==$fLVpMITHh19cAbRldeGkIjC2G2daUG5ihBONYwr0TIQ=
+saly:pbkdf2$sha256$120000$X1pqPs1C8hdOzDDiNlzhtw==$VbTt+OXNLJK8csudeYFGrg8Ruo8f1vNv9eVYEp8t10Y=
+omar:pbkdf2$sha256$120000$Zwd5G6A3eD8SgBuaMqnFvA==$QSgAG9lAOTrOag1F+5ecE5XtHlTeGfr2nJeWU7mddqM=

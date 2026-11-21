@@ -1,0 +1,87 @@
+# Generates testcases.html from the REAL result files (status comes from the files, never typed by hand).
+import re, os, html
+here = os.path.dirname(os.path.abspath(__file__)); docs = os.path.dirname(here)
+res = {}
+for l in open(os.path.join(docs, 'test-results', 'integration-test-results.txt'), encoding='utf-8'):
+    m = re.match(r'(T\d+)\s+(.+?)\s+(PASSED|FAILED)\s+(\d+) ms', l)
+    if m: res[m.group(1)] = (m.group(3), m.group(4))
+g = {}
+for l in open(os.path.join(docs, 'test-results', 'gui-scenario-results.txt'), encoding='utf-8'):
+    m = re.match(r'(PASSED|FAILED)\s+(G\d+b?)\s', l)
+    if m: g[m.group(2)] = m.group(1)
+E = html.escape
+IT = [  # id, title, preconditions, steps, expected, actual
+('T01','Valid login','Server running (loopback, ephemeral port); accounts file with 6 demo users','Client sara logs in with sara/sara123','Login OK; directory has sara with IP 127.0.0.1, advertised UDP port = real bound port, presence Online, last-seen set','As expected: port registered at the server equals the client\'s bound DatagramSocket port','integration-test-results.txt'),
+('T02','Wrong credentials / bad input','Server running','Wrong password; unknown user; invalid IP 999.1.1.1; port 70000/abc/0; connect to closed port 1','"Wrong username or password" (same text for unknown user); no session; invalid IP/port rejected locally; refused connection explained; no password in server log','As expected for all 7 sub-cases','integration-test-results.txt'),
+('T03','Duplicate login rejected','sara already online','Second client logs in as sara; same connection sends LOGIN twice','Second rejected (DUPLICATE_LOGIN); first stays connected; repeated LOGIN gets ALREADY_LOGGED_IN and does not change the UDP port','As expected; directory still 1 sara','integration-test-results.txt'),
+('T04','Concurrent duplicate login','8 raw TCP connections ready, barrier','8 threads send LOGIN for "ali" at the same instant','Exactly 1 success, 7 DUPLICATE_LOGIN; directory holds one session; closing the losers does not remove the winner','1 OK / 7 DUPLICATE_LOGIN / 0 other (atomic putIfAbsent)','integration-test-results.txt'),
+('T05','Three clients + automatic directory updates','Server running','sara, adam, ali log in one after another; ali logs out','Every client sees every login/logout within 3 s without refreshing','As expected','integration-test-results.txt'),
+('T06','Six simultaneous clients','Server running','6 clients log in; each sends a TCP message to each other client (30 messages)','All 6 see 6 users; each client receives 5 messages','As expected','integration-test-results.txt'),
+('T07','UDP direct chat + ACK, no server relay','sara, adam online','sara sends UDP message to adam','adam displays it, sender port = sara\'s UDP port; sara status Acknowledged after exactly 1 transmission; server relay counter 0; payload absent from server log','As expected (relayed count 0, no "TCP RELAY" log line)','integration-test-results.txt; screenshots/server_tcp_relay_log.png'),
+('T08','TCP relay to addressed user only','sara, adam, ali online','sara sends TCP message (with quotes) to adam','adam receives once; ali receives nothing in 1.2 s; sender status says relayed / not a read receipt; relay counter = 1','As expected','integration-test-results.txt'),
+('T09','Presence change','sara, adam online','adam sets Busy, then Away; raw client sends invalid status','sara sees Busy then Away in her directory; invalid status rejected','As expected','integration-test-results.txt'),
+('T10','Offline recipient','sara online, omar offline','sara sends TCP and UDP message to omar','send() returns < 300 ms; both end FAILED with "offline"; no datagram sent; sara stays connected','As expected','integration-test-results.txt'),
+('T11','Lost UDP: retries then Failed','sara, adam online; adam drops incoming UDP (TCP up)','sara sends UDP message','Exactly 3 transmissions ~1 s apart, Failed ≈3 s after first send; adam dropped 3 datagrams and shows nothing; TCP stays up; next message after re-enabling is Acknowledged','As expected (span 2.7–4.2 s, gap 0.9–1.5 s)','integration-test-results.txt; screenshots/client_udp_failed.png'),
+('T12','Lost ACK: retransmission without duplicate display','adam configured to drop next 2 ACKs','sara sends UDP; then variant with 3 ACKs dropped','Same messageId sent 3×; adam displays once and logs 2 duplicates; sara Acknowledged on 3rd; with all ACKs lost sender shows Failed, receiver still displayed once','As expected','integration-test-results.txt'),
+('T13','Duplicate datagrams','adam online; raw UDP socket','Send identical CHAT_UDP 3×; same id from another sender','3 ACKs returned, displayed once; same id from other sender is a new message','As expected','integration-test-results.txt'),
+('T14','Unexpected client termination + stale session','Server timeout 2 s','Raw client logs in then closes with TCP RST; another raw client logs in and goes silent','Server logs removal, others updated, server accepts new logins; silent session removed by heartbeat timeout; healthy (pinging) clients untouched','As expected','integration-test-results.txt'),
+('T15','Server Stop/Start and cleanup','2 clients online','Stop server; probe port; restart on same port; login + relay; stop again','Clients see DISCONNECTED; 0 server threads left; port free immediately; restart on same port works; no leaked threads','As expected','integration-test-results.txt'),
+('T16','Arabic / Unicode / multiline / quotes','sara, adam online','Send 4 texts (Arabic multiline with quotes+backslash, emoji + JSON text + tab, CRLF lines, mixed scripts incl. U+2028) over UDP and TCP','Every text arrives byte-for-byte identical on both transports','As expected (8/8 equal)','integration-test-results.txt; screenshots/client_arabic_received.png'),
+('T17','Empty / oversized messages','sara, adam online','Blank texts; 1001 chars; 1001 emoji; exactly 1000 Arabic / emoji / control chars; hostile oversized TCP and UDP input','Blank and 1001 rejected (code points counted, not bytes); 1000 chars delivered both transports (incl. 6000-byte worst-case datagram); server rejects 1001 (INVALID_TEXT); receiver drops oversize datagram without ACK','As expected','integration-test-results.txt; screenshots/client_limit_1000.png'),
+('T18','Malformed frames and datagrams','Server and clients running','Garbage, array, missing cmd, unknown cmd, chat before login, bad login fields, 37 KB frame, invalid UTF-8; 8 malformed UDP datagrams','Specific error codes, connection still usable, server alive; UDP listener ignores junk, logs it, still ACKs valid messages','As expected','integration-test-results.txt'),
+('T20','Separate histories, unread, 200 cap','ConversationStore unit-level','Add 250 messages to one peer, 1 to another; unread counters','Cap 200 (≥50 required), oldest evicted, histories separate, unread per contact and cleared on open','As expected','integration-test-results.txt; GUI G13, G16, G17'),
+('T21','Logout/Login: no stale tasks','adam has UDP paused; sara online','sara sends UDP, logs out immediately, logs in again, sends again','Old message cancelled (not resent); client threads released; new session id; adam sees exactly 1 + 3 datagrams','As expected','integration-test-results.txt'),
+('T23','Password hashing, no plaintext','accounts.txt','Inspect file; hash twice; verify; login and logout, scan logs','No plaintext; PBKDF2 params stored; random salts; garbage hashes rejected; no password in server/client logs','As expected','integration-test-results.txt'),
+('T24','Dedup cache + unique IDs','—','Size/TTL checks; 200 sends','Bounded size, TTL expiry; 200 distinct message ids','As expected','integration-test-results.txt'),
+('T25','Announcement + slow client isolation','sara, adam online + non-reading raw client','Server broadcast; 300 TCP messages sara→adam while a silent client is connected','Announcement reaches all; adam receives all 300 (a stuck client does not block others)','As expected','integration-test-results.txt'),
+]
+GUI = [  # id, title, G-ids, steps, expected, evidence
+('GUI-1','Server GUI Start/Stop/Restart','G01 G02 G30 G33 G34','Press START; STOP; START again; client logs in','LISTENING shown only after real bind; STOPPED after stop; restart on same port works','screenshots/server_listening.png, server_stopped.png, server_after_restart.png'),
+('GUI-2','Three GUI clients + directory','G03 G04 G05','Start 3 client windows, log in','CONNECTED; each lists the other two; server shows Connected: 3','server_three_clients.png, client_login_contacts.png'),
+('GUI-3','Login errors in the GUI','G06 G07 G08 G09','Wrong password; duplicate sara; IP 999.1.1.1; port 70000','Clear message for each (wrong creds, already logged in, invalid IPv4, port range)','client_wrong_credentials.png, client_duplicate_login.png, client_invalid_port.png'),
+('GUI-4','GUI responsiveness during waits','G10 G20 G23','Connect to unreachable host (5.8 s wait); send to offline user; 3 s UDP retry window; EDT probe every 20 ms','Max EDT latency 74 ms / 135 ms / 98 ms (< 250 ms) — GUI never froze','gui-scenario-results.txt'),
+('GUI-5','UDP P2P + TCP relay in GUI, unread badge','G11 G12 G13 G14 G15','sara→adam UDP; sara→ali TCP','adam badge 1 then cleared on open; sara status ACKNOWLEDGED; ali receives TCP; adam unaffected','client_udp_ack.png, client_unread_badge.png, client_tcp_relay.png, client_tcp_received.png'),
+('GUI-6','Separate conversation histories','G16 G17','Compare history sizes per contact','adam↔sara 3, adam↔ali 0; sara↔adam 3, sara↔ali 1','—'),
+('GUI-7','Presence in GUI','G18','adam selects Busy','sara\'s list shows adam Busy (red dot)','client_presence_busy.png'),
+('GUI-8','Offline user and UDP loss in GUI','G19 G21 G22 G22b','Send to omar (TCP+UDP); adam ticks loss simulation; sara sends UDP; untick and resend','FAILED offline; adam PAUSED; sara shows retries then FAILED; later message ACKNOWLEDGED','client_offline_error.png, client_udp_paused.png, client_udp_retry.png, client_udp_failed.png, client_udp_recovered.png'),
+('GUI-9','Compose rules, Enter key binding, announcement, disconnected state','G24 G25 G26 G27 G28 G29 G32','Empty text; 1001 chars; 1000 chars; inspect Enter/Shift+Enter bindings and run the Enter action; server broadcast; stop server','Send disabled for empty/1001; counter 1001/1000; enabled at 1000; bindings present, Enter action sends; announcement shown; Send disabled when disconnected','client_limit_1000.png, client_announcement.png, client_server_down.png'),
+]
+MAN = [
+('M01','Not Run (environment)','Maven build from a clean unzip','JDK 17+, Maven 3.8+, Internet (Maven Central)','Unzip; run build.bat','"BUILD OK", 3 jars in */target/','Maven Central was unreachable in the authoring environment; sources were built with scripts/build_without_maven.sh (javac --release 17) instead','Keep the console output as evidence'),
+('M02','Manual Verification Required','Two PCs on the same LAN','2 PCs, Windows firewall allowing TCP 8888 and UDP 6000–6200','Server on PC-1; clients on PC-1 and PC-2 (run_client.bat sara 192.168.x.x:8888); UDP + TCP chat','Both transports work across PCs','Only loopback executed here','Screenshots of both PCs'),
+('M03','Manual Verification Required','Different networks via Tailscale/ZeroTier (assignment §3)','2 PCs on different networks, Tailscale or ZeroTier on both','Follow README §6; chat via UDP and TCP','Both work using the overlay IPs','Not possible here (no second network)','Screenshot with overlay IPs in the server table'),
+('M04','Manual Verification Required','Real keyboard Enter / Shift+Enter, real window decorations on Windows','Windows PC','Type in compose box: Enter sends; Shift+Enter adds a line','As described','Key bindings verified programmatically (G27, G28), physical key presses not exercised','Short screen recording'),
+('M05','Manual Verification Required','Kill a GUI client process','Windows PC, server GUI','End the client in Task Manager','Server keeps running; others\' lists update within ~1 s (EOF) or ≤15 s (silent)','Same mechanism verified with raw sockets in T14','Screenshot of server log'),
+('M06','Manual Verification Required','Narrated demo video (3–5 min)','OBS or Win+G','Follow docs/DemoScript_AR.md','DemoVideo.mp4 with both transports, 3 clients, failure cases','An automated silent recording exists (docs/demo_automated_screen_recording.mp4, 3 min 25 s)','DemoVideo.mp4'),
+]
+def st(s): return '<span class="%s">%s</span>' % ('ok' if s == 'PASSED' else 'bad' if s == 'FAILED' else 'man', s)
+rows = ''
+for i, t, pre, steps, exp, act, ev in IT:
+    s, ms = res.get(i, ('NOT RUN', '-'))
+    rows += '<tr><td><b>%s</b><br>%s ms</td><td><b>%s</b><br>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>' % (i, ms, E(t), E(pre), E(steps), E(exp), E(act), st(s), E(ev))
+for i, t, gids, steps, exp, ev in GUI:
+    ids = gids.split(); s = 'PASSED' if all(g.get(x) == 'PASSED' for x in ids) else 'FAILED'
+    rows += '<tr><td><b>%s</b><br>%s</td><td><b>%s</b><br>real Swing windows on a virtual display (Xvfb)</td><td>%s</td><td>%s</td><td>Checks %s all executed</td><td>%s</td><td>%s</td></tr>' % (i, E(gids), E(t), E(steps), E(exp), E(', '.join(ids)), st(s), E(ev))
+for i, status, t, pre, steps, exp, act, ev in MAN:
+    rows += '<tr><td><b>%s</b></td><td><b>%s</b><br>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>' % (i, E(t), E(pre), E(steps), E(exp), E(act), '<span class="man">%s</span>' % E(status), E(ev))
+npass = sum(1 for v in res.values() if v[0] == 'PASSED'); nfail = len(res) - npass
+gp = sum(1 for v in g.values() if v == 'PASSED'); gf = len(g) - gp
+cover = [('1 Valid login','T01, GUI-2'),('2 Wrong credentials','T02, GUI-3'),('3 Duplicate login','T03, GUI-3'),('4 Concurrent duplicate login','T04'),('5 Three clients + auto directory updates','T05, GUI-2'),('6 ≥5 simultaneous clients','T06'),('7 UDP direct + ACK, no relay','T07, GUI-5'),('8 TCP relay to addressee only','T08, GUI-5'),('9 Presence changes','T09, GUI-7'),('10 Offline recipient','T10, GUI-8'),('11 Lost UDP → retries → Failed','T11, GUI-8'),('12 Lost ACK → no duplicate display','T12'),('13 Duplicate datagrams','T13'),('14 Unexpected client termination','T14 (raw sockets); GUI process kill = M05'),('15 Server Stop/Start + cleanup','T15, GUI-1'),('16 Arabic/Unicode/multiline/quotes','T16'),('17 Empty / oversized','T17, GUI-9'),('18 Invalid input, malformed frames/datagrams','T18, GUI-3'),('19 GUI responsiveness during waits','GUI-4'),('20 Separate histories + unread badges','T20, GUI-5, GUI-6'),('21 Logout/Login without stale tasks','T21'),('22 Different-network connectivity','M03 — Manual Verification Required (not run)')]
+crow = ''.join('<tr><td>%s</td><td>%s</td></tr>' % (E(a), E(b)) for a, b in cover)
+doc = '''<!DOCTYPE html><html><head><meta charset="utf-8"><title>PeerConnect Test Cases</title><style>
+@page { size: A4 landscape; margin: 11mm; @bottom-center { content: "PeerConnect TestCases - YOUR_NAME_1 / YOUR_ID_1 , YOUR_NAME_2 / YOUR_ID_2 - page " counter(page) " / " counter(pages); font-size:7.5pt; color:#555 } }
+body { font-family:'DejaVu Sans',sans-serif; font-size:7.6pt; color:#111 } h1{font-size:15pt;color:#12304F;margin:0} h2{font-size:10pt;color:#12304F;margin:7pt 0 3pt}
+table{border-collapse:collapse;width:100%%;table-layout:fixed} th,td{border:1px solid #b9c5d1;padding:2pt 3pt;vertical-align:top;word-break:break-word} th{background:#e4edf6}
+.ok{color:#0b6b3a;font-weight:bold}.bad{color:#b00020;font-weight:bold}.man{color:#9a5b00;font-weight:bold} tr{page-break-inside:avoid}
+</style></head><body>
+<h1>PeerConnect — Test Cases and Results</h1>
+<p>Computer Networks I (10636454) · Group: YOUR_NAME_1 / YOUR_ID_1 · YOUR_NAME_2 / YOUR_ID_2 (placeholders) · Environment: OpenJDK 21 (compiled --release 17), Linux, loopback sockets; GUI tests on a virtual X display (Xvfb).</p>
+<p><b>Summary of executed tests:</b> integration tests <span class="ok">%d PASSED</span>, <span class="bad">%d FAILED</span>; GUI scenario checks <span class="ok">%d PASSED</span>, <span class="bad">%d FAILED</span>. Statuses below are read from <code>docs/test-results/*.txt</code> produced by the test runs (the run was repeated; all passed both times). <span class="man">Manual / Not Run</span> items are listed honestly — nothing is marked Passed unless it was executed. Passing tests prove the listed behaviour on loopback only; they do not prove the whole system on a real LAN/Internet.</p>
+<table><colgroup><col style="width:6%%"><col style="width:15%%"><col style="width:17%%"><col style="width:24%%"><col style="width:17%%"><col style="width:7%%"><col style="width:14%%"></colgroup>
+<tr><th>Test ID</th><th>Title / preconditions</th><th>Steps</th><th>Expected</th><th>Actual</th><th>Status</th><th>Evidence</th></tr>
+%s</table>
+<h2>Coverage of the 22 required scenarios</h2><table style="width:70%%"><tr><th>Scenario</th><th>Covered by</th></tr>%s</table>
+<p>Evidence files: <code>docs/test-results/integration-test-results.txt</code>, <code>docs/test-results/gui-scenario-results.txt</code>, <code>screenshots/*.png</code> (real captures of the running windows), <code>docs/demo_automated_screen_recording.mp4</code>. Re-run: <code>run_tests.bat</code> and <code>scripts/record_demo.sh</code>.</p>
+</body></html>''' % (npass, nfail, gp, gf, rows, crow)
+open(os.path.join(here, 'testcases.html'), 'w', encoding='utf-8').write(doc)
+print('testcases.html written:', npass, 'int passed', nfail, 'failed;', gp, 'gui passed', gf, 'failed')

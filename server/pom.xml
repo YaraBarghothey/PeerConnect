@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- PeerConnect - authors: YOUR_NAME_1 / YOUR_ID_1 , YOUR_NAME_2 / YOUR_ID_2 -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent><groupId>com.peerconnect</groupId><artifactId>peerconnect-parent</artifactId><version>1.0.0</version></parent>
+  <artifactId>peerconnect-server</artifactId>
+  <packaging>jar</packaging>
+  <properties><app.main.class>com.peerconnect.server.ServerMain</app.main.class></properties>
+  <dependencies>
+    <dependency><groupId>com.peerconnect</groupId><artifactId>peerconnect-common</artifactId><version>1.0.0</version></dependency>
+  </dependencies>
+  <build>
+    <finalName>peerconnect-server</finalName>
+    <plugins>
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-shade-plugin</artifactId></plugin>
+    </plugins>
+  </build>
+</project>

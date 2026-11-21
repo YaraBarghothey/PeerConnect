@@ -1,0 +1,111 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>PeerConnect Project Report</title>
+<style>
+@page { size: A4; margin: 13mm 13mm 14mm 13mm; @bottom-center { content: "PeerConnect - YOUR_NAME_1 / YOUR_ID_1 , YOUR_NAME_2 / YOUR_ID_2   -   page " counter(page) " / " counter(pages); font-size: 7.5pt; color:#555 } }
+body { font-family: 'DejaVu Sans', sans-serif; font-size: 8.4pt; line-height: 1.28; color:#111 }
+h1 { font-size: 16pt; margin: 0 0 2pt 0; color:#12304F } h2 { font-size: 10.5pt; margin: 8pt 0 3pt; color:#12304F; border-bottom: 1px solid #9db4cc; padding-bottom:1pt }
+h3 { font-size: 9pt; margin: 5pt 0 2pt } p { margin: 2pt 0 } .meta { color:#333; font-size:8pt; margin-bottom:4pt }
+table { border-collapse: collapse; width:100%; margin: 3pt 0; table-layout: fixed } th,td { border:1px solid #b9c5d1; padding: 2pt 3.5pt; vertical-align: top; font-size: 7.6pt }
+th { background:#e4edf6 } code { word-break: break-all; overflow-wrap: anywhere } code, pre { font-family: 'DejaVu Sans Mono', monospace; font-size: 6.9pt } pre { background:#f3f6f9; border:1px solid #d5dde5; padding:3pt; margin:2pt 0; white-space: pre-wrap; word-break: break-all }
+.two { display:flex; gap:6pt } .two > div { flex:1 } img { width:100%; border:1px solid #bbb } .cap { font-size:7pt; color:#444; text-align:center; margin-bottom:3pt }
+ul { margin: 2pt 0 2pt 12pt; padding:0 } li { margin: 0.6pt 0 } .pb { page-break-before: always }
+</style></head><body>
+<h1>PeerConnect — Project Report</h1>
+<div class="meta">Computer Networks I (10636454) · An-Najah National University · Programming Homework 2026 · Instructor: Dr. Eng. Saed Tarapiah<br>
+<b>Group:</b> YOUR_NAME_1 / YOUR_ID_1 &nbsp;·&nbsp; YOUR_NAME_2 / YOUR_ID_2 &nbsp;(placeholders — replace before submission)</div>
+
+<h2>1. Architecture</h2>
+<p>PeerConnect is a desktop text messenger written in Java 17 (sockets + Swing, no third-party libraries). One central <b>server</b> (TCP) and any number of <b>clients</b>. Three functional parts: <b>A</b> TCP control plane, <b>B</b> UDP peer-to-peer chat (server NOT involved), <b>C</b> TCP chat relayed by the server. Modules: <code>common</code> (JSON codec, framing, validation, UDP packet, PBKDF2, dedup cache), <code>server</code> (<code>ServerMain</code>, <code>PeerConnectServer</code>, <code>ServerFrame</code>), <code>client</code> (<code>ClientMain</code>, <code>MessengerClient</code>, <code>TcpLink</code>, <code>UdpEngine</code>, <code>ClientFrame</code>), <code>tests</code>.</p>
+<svg viewBox="0 0 760 250" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="DejaVu Sans, sans-serif" font-size="11">
+ <rect x="255" y="12" width="250" height="104" rx="8" fill="#e4edf6" stroke="#12304F"/>
+ <text x="380" y="30" text-anchor="middle" font-weight="bold">PeerConnect Server</text>
+ <text x="380" y="46" text-anchor="middle" font-size="9.5">ServerSocket (TCP) — accept loop</text>
+ <text x="380" y="60" text-anchor="middle" font-size="9.5">per client: reader thread + writer thread</text>
+ <text x="380" y="74" text-anchor="middle" font-size="9.5">AccountStore (PBKDF2) · UserDirectory</text>
+ <text x="380" y="88" text-anchor="middle" font-size="9.5">relay (CHAT_TCP) · heartbeat sweeper</text>
+ <text x="380" y="106" text-anchor="middle" font-size="9.5" fill="#B00020">NO UDP socket — never sees UDP chat</text>
+ <rect x="20" y="150" width="200" height="92" rx="8" fill="#eaf6ee" stroke="#1B7F4B"/>
+ <text x="120" y="168" text-anchor="middle" font-weight="bold">Client A (sara)</text>
+ <text x="120" y="184" text-anchor="middle" font-size="9.5">Swing GUI (EDT only)</text>
+ <text x="120" y="198" text-anchor="middle" font-size="9.5">TcpLink · MessengerClient</text>
+ <text x="120" y="212" text-anchor="middle" font-size="9.5">UdpEngine (DatagramSocket :6000)</text>
+ <text x="120" y="228" text-anchor="middle" font-size="9.5">ACK / retry / dedup</text>
+ <rect x="540" y="150" width="200" height="92" rx="8" fill="#eaf6ee" stroke="#1B7F4B"/>
+ <text x="640" y="168" text-anchor="middle" font-weight="bold">Client B (adam)</text>
+ <text x="640" y="184" text-anchor="middle" font-size="9.5">Swing GUI (EDT only)</text>
+ <text x="640" y="198" text-anchor="middle" font-size="9.5">TcpLink · MessengerClient</text>
+ <text x="640" y="212" text-anchor="middle" font-size="9.5">UdpEngine (DatagramSocket :6001)</text>
+ <text x="640" y="228" text-anchor="middle" font-size="9.5">ACK / retry / dedup</text>
+ <line x1="170" y1="150" x2="320" y2="116" stroke="#2563A8" stroke-width="2"/><line x1="590" y1="150" x2="440" y2="116" stroke="#2563A8" stroke-width="2"/>
+ <text x="178" y="126" fill="#2563A8" font-size="9.5">TCP (control + CHAT_TCP)</text><text x="470" y="136" fill="#2563A8" font-size="9.5">TCP (control + CHAT_TCP)</text>
+ <line x1="220" y1="196" x2="540" y2="196" stroke="#2E7D6B" stroke-width="2.5" stroke-dasharray="7 4"/>
+ <text x="380" y="190" text-anchor="middle" fill="#2E7D6B" font-weight="bold">UDP P2P: CHAT_UDP ⇄ ACK_UDP (direct)</text>
+ <text x="380" y="214" text-anchor="middle" fill="#444" font-size="9">peer IP + UDP port come from the server (PEER command)</text>
+</svg>
+
+<h2>2. TCP / UDP data flows</h2>
+<table><tr><th style="width:50%">UDP P2P message (A → B)</th><th>TCP via Server message (A → C)</th></tr><tr><td>
+1. A sends <code>PEER {username:B}</code> over TCP; server answers B's current <code>ip</code> + <code>udpPort</code> (or <code>OFFLINE</code>).<br>
+2. A's <code>UdpEngine</code> sends <code>CHAT_UDP</code> straight to B's socket (attempt 1, status <i>Sent</i>).<br>
+3. B's receive thread validates, ACKs with <code>ACK_UDP</code> (same messageId) <i>to the datagram's source address</i>, and shows the message once.<br>
+4. A's receive thread matches messageId + expected peer → cancels retries → status <b>Acknowledged</b>. No ACK within 1 s → resend (max 3 sends) → <b>Failed</b>.<br>
+<i>The server is not on this path.</i></td><td>
+1. A sends <code>CHAT_TCP {to:C,text,messageId}</code> on its TCP connection.<br>
+2. The server validates text (1–1000 chars), looks up C in the directory, queues an <code>EVENT CHAT_TCP</code> frame on C's outbox (only C).<br>
+3. Server replies to A: <code>{ok:true,status:"RELAYED"}</code> or <code>{ok:false,error:"OFFLINE"…}</code>.<br>
+4. C's reader thread validates again and displays it. A shows <b>Sent — relayed by the server (not a read receipt)</b>.<br>
+<i>RELAYED means "server wrote it to C's connection", not "C read it".</i></td></tr></table>
+
+<h2>3. Protocol specification</h2>
+<p><b>TCP framing:</b> JSON Lines — one JSON object per line, UTF-8, terminated by <code>\n</code>. All user text is JSON-escaped (<code>\n</code>, <code>\"</code>, <code>\\</code>, control chars as <code>\u00XX</code>), so a frame never contains a raw newline. Max frame 32 KiB (<code>LineReader</code> skips an over-long/invalid-UTF-8 line and replies <code>FRAME_TOO_LARGE</code>/<code>BAD_ENCODING</code>, staying aligned). Client → server: <code>{"id","cmd",…}</code>. Server → client: <code>{"type":"RESPONSE","id",…,"ok"}</code> answers exactly one request (matched by <code>id</code>); <code>{"type":"EVENT","event",…}</code> are asynchronous (<code>USERS_UPDATE</code>, <code>CHAT_TCP</code>, <code>ANNOUNCEMENT</code>, <code>SERVER_SHUTDOWN</code>). Own JSON codec (<code>common/Json.java</code>) to avoid external dependencies.</p>
+<table><colgroup><col style="width:9%"><col style="width:35%"><col style="width:56%"></colgroup><tr><th>Op</th><th>Request (client → server)</th><th>Response / event (server → client) — captured from the running server</th></tr>
+<tr><td>LOGIN</td><td><code>{"id":"r1","cmd":"LOGIN","username":"sara","password":"…","udpPort":6000}</code></td><td><code>{"type":"RESPONSE","id":"r1","cmd":"LOGIN","ok":true,"username":"sara","ip":"127.0.0.1","udpPort":6000,"users":[{…}]}</code> · errors: <code>BAD_CREDENTIALS</code>, <code>DUPLICATE_LOGIN</code>, <code>ALREADY_LOGGED_IN</code>, <code>BAD_REQUEST</code></td></tr>
+<tr><td>LOGOUT</td><td><code>{"id":"r8","cmd":"LOGOUT"}</code></td><td><code>{"type":"RESPONSE","id":"r8","cmd":"LOGOUT","ok":true}</code> then others get <code>USERS_UPDATE</code></td></tr>
+<tr><td>USERS</td><td><code>{"id":"r2","cmd":"USERS"}</code></td><td><code>{"type":"RESPONSE","id":"r2","cmd":"USERS","ok":true,"users":[{"username":"adam","ip":"127.0.0.1","udpPort":6001,"presence":"Online","lastSeen":1794994375668}]}</code></td></tr>
+<tr><td>PRESENCE</td><td><code>{"id":"r3","cmd":"PRESENCE","status":"Busy"}</code></td><td><code>{"type":"RESPONSE","id":"r3","cmd":"PRESENCE","ok":true,"status":"Busy"}</code> + event <code>{"type":"EVENT","event":"USERS_UPDATE","users":[…]}</code> to all</td></tr>
+<tr><td>PEER (discovery)</td><td><code>{"id":"r4","cmd":"PEER","username":"adam"}</code></td><td><code>{"type":"RESPONSE","id":"r4","cmd":"PEER","ok":true,"peer":{"username":"adam","ip":"127.0.0.1","udpPort":6001,…}}</code> or <code>"error":"OFFLINE"</code></td></tr>
+<tr><td>CHAT_TCP</td><td><code>{"id":"r5","cmd":"CHAT_TCP","to":"adam","messageId":"s1a2b3c4d-7","text":"مرحبا\nسطر ثان \"اقتباس\""}</code></td><td>sender: <code>{"type":"RESPONSE","id":"r5","cmd":"CHAT_TCP","ok":true,"status":"RELAYED","messageId":"s1a2b3c4d-7"}</code> · recipient only: <code>{"type":"EVENT","event":"CHAT_TCP","messageId":"s1a2b3c4d-7","from":"sara","to":"adam","text":"…","timestamp":…}</code> · error: <code>{"ok":false,"error":"OFFLINE","message":"User 'omar' is offline"}</code></td></tr>
+<tr><td>PING / timeout</td><td><code>{"id":"r7","cmd":"PING"}</code> every 5 s</td><td><code>{"type":"RESPONSE","id":"r7","cmd":"PING","ok":true,"pong":true,"serverTime":…}</code>. Server closes a session silent for 15 s (stale); client treats 15 s of server silence as a dead connection.</td></tr></table>
+<p><b>UDP datagram</b> (JSON, UTF-8, one per datagram, receive buffer 8192 B ≥ worst case 1000 chars × 6 B escaping + envelope): <code>{"v":1,"type":"CHAT_UDP","messageId":"s1a2b3c4d-7","sender":"sara","recipient":"adam","timestamp":1794994375788,"payload":"text"}</code> and <code>{"v":1,"type":"ACK_UDP","messageId":"s1a2b3c4d-7","sender":"adam","recipient":"sara","timestamp":…,"payload":""}</code>. Fields, type, recipient and text (1–1000 code points) are validated on receive; malformed datagrams are logged and dropped. IDs are <code>s&lt;random32bit&gt;-&lt;counter&gt;</code>, unique per client login session. Arrival order is never relied upon: every datagram is self-contained and ACKs are matched by <code>messageId</code>. Passwords are never placed in a UDP datagram.</p>
+
+<h2>4. Concurrency model</h2>
+<ul>
+<li><b>Server:</b> accept loop thread; per client one <i>reader</i> thread (parses, handles commands) and one <i>writer</i> thread draining a bounded outbox (512 frames) — frames from many threads never interleave, and a slow client fills only its own queue (then it is disconnected) instead of blocking broadcasts. A scheduler thread sweeps stale sessions. All pool threads are named <code>pc-server-*</code> and joined in <code>stop()</code>.</li>
+<li><b>Shared state:</b> <code>UserDirectory</code> = <code>ConcurrentHashMap</code>; duplicate-login check is the single atomic <code>putIfAbsent</code> (a <code>containsKey</code>+<code>put</code> pair would race); cleanup uses <code>remove(user, session)</code> so an old session can never delete a newer one. Counters/flags are <code>volatile</code>/atomic.</li>
+<li><b>Client:</b> Swing <b>EDT</b> only builds/updates widgets; every network call runs on background threads: <code>pc-client-control</code> (login/logout), <code>pc-client-work-N</code> (PEER lookup, sends), <code>pc-client-tcp-reader</code>, <code>pc-client-tcp-writer</code> (single writer ⇒ no frame mixing), <code>pc-client-udp-recv</code>, <code>pc-client-udp-retry</code>, <code>pc-client-heartbeat</code>. Results return through <code>MessengerListener</code> and are re-posted with <code>SwingUtilities.invokeLater</code>. No <code>get()</code>/<code>join()</code>/socket call is made on the EDT.</li>
+<li><b>Session lifecycle:</b> each login creates a new <code>Session</code> (new UDP socket, TCP link, message-id prefix). Logout/connection loss calls an idempotent <code>teardown</code> that closes sockets, cancels pending retries, and shuts the executors down; nothing from an old session can fire later (test T21).</li></ul>
+
+<h2 class="pb">5. Reliability strategy (UDP)</h2>
+<table><tr><th>Event</th><th>Sender (<code>UdpEngine</code>)</th><th>Receiver</th></tr>
+<tr><td>t = 0 s</td><td>send #1 (status <i>Sent, attempt 1/3</i>), start 1 s timer</td><td>validate → dedup check → ACK → display (once)</td></tr>
+<tr><td>t = 1 s, no ACK</td><td>send #2 <b>same messageId</b> (attempt 2/3)</td><td>duplicate: ACK again, <b>not</b> displayed again</td></tr>
+<tr><td>t = 2 s, no ACK</td><td>send #3 (attempt 3/3)</td><td>same</td></tr>
+<tr><td>t = 3 s, no ACK</td><td>status <b>Failed</b> (no ACK after 3 attempts)</td><td>—</td></tr>
+<tr><td>ACK arrives</td><td>matched by messageId <i>and</i> expected peer name → timer cancelled → <b>Acknowledged</b></td><td>—</td></tr></table>
+<ul><li><b>Races:</b> each pending message has its own monitor and a <code>done</code> flag; ACK handler, timer and logout-cancel all take the monitor and check <code>done</code>, so exactly one of {ACK, timeout, cancel} wins. The registry is a <code>ConcurrentHashMap</code>; <code>remove(id, p)</code> is value-checked.</li>
+<li><b>Deduplication:</b> <code>DedupCache</code> keyed by <code>sender|messageId</code>, ≤ 4096 entries, 10-min TTL (insertion-ordered purge). Lost-ACK case (T12): receiver shows 1 message, sender succeeds on attempt 3; if <i>all</i> ACKs are lost the sender shows Failed although the peer has the message — hence <b>no guaranteed delivery is claimed</b>.</li>
+<li><b>Test mode:</b> client checkbox "simulate UDP packet loss" makes the receive thread drop datagrams before decoding (no ACK, no display, state <i>PAUSED</i>) while TCP stays connected; logout closes the socket and cancels retries; new logins never resend old messages.</li></ul>
+
+<h2>6. GUI screenshots (real windows, captured by the automated GUI scenario)</h2>
+<div class="two"><div><img src="../../screenshots/client_udp_ack.png"><div class="cap">Fig. 1 — Client: UDP P2P messages, ACK received, Arabic multiline, transport selector, diagnostics</div></div>
+<div><img src="../../screenshots/client_udp_failed.png"><div class="cap">Fig. 2 — Packet-loss test: retransmissions then Failed; adam's UDP is PAUSED</div></div></div>
+<div class="two"><div><img src="../../screenshots/server_tcp_relay_log.png"><div class="cap">Fig. 3 — Server: Start/Stop, bind IP/port, active-user table, timestamped log (TCP RELAY shown; no UDP entries)</div></div>
+<div><img src="../../screenshots/client_tcp_relay.png"><div class="cap">Fig. 4 — TCP via Server message to ali (status: relayed, not a read receipt)</div></div></div>
+
+<h2>7. TCP vs UDP comparison (as observed in PeerConnect)</h2>
+<table><tr><th></th><th>TCP (control + "TCP via Server")</th><th>UDP (P2P chat)</th></tr>
+<tr><td>Connection</td><td>connection-oriented, one persistent connection per client to the server; EOF/RST detected immediately (T14, T15)</td><td>connectionless; a datagram socket per client, no handshake; peer unreachable is only detected by missing ACK</td></tr>
+<tr><td>Routing</td><td>client → server → recipient (server sees plaintext + payload, logs only sizes)</td><td>client → client directly using IP:port learned from the server; server never sees payload (T07: relay counter 0)</td></tr>
+<tr><td>Ordering</td><td>byte stream, in-order, framing by newline</td><td>no ordering guarantee; each datagram self-contained, ACKs matched by messageId</td></tr>
+<tr><td>Reliability</td><td>transport-level retransmission; but TCP success ≠ application delivery (we only know the server relayed it)</td><td>none from the network; we add ACK + 2 retries + dedup: loss → Failed after ≈3 s (T11), lost ACK → duplicate suppressed (T12, T13)</td></tr>
+<tr><td>Observed behaviour</td><td>LAN/loopback latency ≈ ms; 6 clients exchanged 30 messages with no loss (T06); server restart is noticed instantly by all clients</td><td>direct path ≈ 1 RTT to ACK (T07 ≈ ms); with receiver dropping UDP the sender needed exactly 3 transmissions at 1.0 s spacing (measured 0.9–1.5 s tolerance)</td></tr></table>
+
+<h2>8. Security and known limitations</h2>
+<p><b>Unencrypted authentication:</b> LOGIN passwords and all TCP/UDP chat text travel in clear text (allowed by the assignment for classroom testing only). Anyone on the path can read or alter them; there is no TLS, no replay protection, and UDP sender names can be spoofed on an untrusted LAN. On the server, passwords are stored only as salted PBKDF2-HMAC-SHA256 (120 000 iterations, 16-byte random salt per account); they are never written to logs. Other limits: in-memory history only; UDP across NAT needs an overlay (Tailscale/ZeroTier) — not verified here (no second network available); Maven build not executed in the authoring environment (compiled with javac, see README).</p>
+
+<h2>9. Test summary and division of work</h2>
+<p>23 real-socket integration tests (all executed and passed, twice) and a 35-check GUI scenario on real Swing windows (all passed) — see <code>TestCases.pdf</code>. Items needing humans/second machine are listed there as <i>Manual Verification Required</i> (Maven build, LAN/two-network test, real keyboard, narrated video).</p>
+<table><tr><th style="width:24%">Component</th><th>Student 1: YOUR_NAME_1 (YOUR_ID_1)</th><th>Student 2: YOUR_NAME_2 (YOUR_ID_2)</th></tr>
+<tr><td>Server (auth, directory, relay, GUI)</td><td colspan="2"><i>Template — fill in the real contribution of each student (not invented here)</i></td></tr>
+<tr><td>Client networking (TCP link, UDP engine, ACK/retry)</td><td colspan="2"><i>…</i></td></tr>
+<tr><td>Client GUI, protocol, tests, documentation, demo</td><td colspan="2"><i>…</i></td></tr></table>
+</body></html>

@@ -1,0 +1,12 @@
+PeerConnect - Computer Networks I (10636454) - Programming Homework 2026
+Instructor: Dr. Eng. Saed TARAPIAH
+
+Student 1 full name : YOUR_NAME_1
+Student 1 reg. number: YOUR_ID_1
+
+Student 2 full name : YOUR_NAME_2
+Student 2 reg. number: YOUR_ID_2
+
+(Replace the four placeholders above, and rename the ZIP to PeerConnect_<ID1>_<ID2>.zip.
+ The same placeholders appear in: the header comment of every .java file, pom.xml files, .bat files,
+ README.md, docs/*.md, and the cover of the PDFs. See README.md section "Replace the placeholders".)

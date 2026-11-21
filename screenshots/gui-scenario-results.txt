@@ -1,0 +1,38 @@
+PASSED  G01  server status is STOPPED before Start
+PASSED  G02  server status LISTENING after bind
+PASSED  G03  three clients CONNECTED
+PASSED  G04  each client lists the other two users
+PASSED  G05  server GUI shows Connected: 3
+PASSED  G06  wrong password -> 'Wrong username or password'
+PASSED  G07  duplicate login rejected with clear message
+PASSED  G08  invalid IP is rejected locally with a friendly message
+PASSED  G09  invalid port is rejected locally
+PASSED  G10  EDT max latency while connecting to unreachable host (5853 ms of blocking network wait) = 74 ms (< 250 ms)
+        login result text: Cannot connect to the server (is it running? check IP and port)
+PASSED  G11  adam received the UDP message (unread badge)
+PASSED  G12  sara's message status is ACKNOWLEDGED (set only after the ACK arrived)
+PASSED  G13  unread badge cleared when the conversation is opened
+PASSED  G14  ali received the relayed message
+PASSED  G15  adam (not addressed) has no unread for ali
+PASSED  G16  separate histories: adam<->sara has 3 bubbles, adam has no conversation with ali
+PASSED  G17  separate histories: sara has 3 with adam and 1 with ali
+PASSED  G18  sara sees adam as Busy
+PASSED  G19  offline recipient: both messages (TCP, UDP) end as FAILED
+PASSED  G20  EDT max latency while sending to offline user = 135 ms (< 250 ms)
+PASSED  G21  adam UDP state shows PAUSED (test mode)
+PASSED  G22  sara's message ends as FAILED after 3 attempts (no ACK)
+PASSED  G23  EDT max latency during the 3-second retry window = 98 ms (< 250 ms)
+PASSED  G22b  after UDP is re-enabled the next message is ACKNOWLEDGED
+PASSED  G24  Send disabled for empty text
+PASSED  G25  Send disabled for 1001 characters; counter shows 1001/1000
+PASSED  G26  Send enabled at exactly 1000 characters (2000 UTF-8 bytes)
+PASSED  G27  Enter = send, Shift+Enter = newline key bindings installed
+PASSED  G28  Enter action sent the message (history grew)
+PASSED  G29  announcement reached the client
+PASSED  G30  server shows STOPPED
+PASSED  G31  clients report DISCONNECTED
+PASSED  G32  Send disabled while disconnected
+PASSED  G33  server LISTENING again on the same port
+PASSED  G34  login works after server restart
+INFO  EDT latency samples: 9810, overall max (includes screenshot painting on the EDT) = 1019 ms
+SUMMARY GUI scenario: 35 passed, 0 failed
